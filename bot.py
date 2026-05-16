@@ -7,10 +7,23 @@ import os
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 WEBHOOK_AVIS = os.environ["WEBHOOK_AVIS"]
 
-intents = discord.Intents.default()
-intents.members = True
-client = discord.Client(intents=intents)
-tree = app_commands.CommandTree(client)
+class MyClient(discord.Client):
+    def __init__(self):
+        intents = discord.Intents.default()
+        intents.members = True
+        super().__init__(intents=intents)
+        self.tree = app_commands.CommandTree(self)
+
+    async def setup_hook(self):
+        # Sync global au démarrage
+        await self.tree.sync()
+        print("Commandes sync globales OK")
+
+    async def on_ready(self):
+        print(f"Bot connecte : {self.user}")
+        print(f"Serveurs : {[g.name for g in self.guilds]}")
+
+client = MyClient()
 
 
 class AvisModal(Modal, title="Laisser un avis Eclipse Official"):
@@ -66,7 +79,7 @@ class AvisBouton(discord.ui.View):
         await interaction.message.edit(view=self)
 
 
-@tree.command(name="avis", description="Demander un avis a un client")
+@client.tree.command(name="avis", description="Demander un avis a un client")
 @app_commands.describe(membre="Le client a qui demander un avis")
 async def avis_cmd(interaction: discord.Interaction, membre: discord.Member):
     if not interaction.user.guild_permissions.administrator:
@@ -80,21 +93,6 @@ async def avis_cmd(interaction: discord.Interaction, membre: discord.Member):
         )
     except discord.Forbidden:
         await interaction.followup.send("Impossible d'envoyer un DM (DMs fermes).", ephemeral=True)
-
-
-@client.event
-async def on_ready():
-    print(f"Bot connecte : {client.user}")
-    # Force sync sur tous les serveurs
-    for guild in client.guilds:
-        try:
-            synced = await tree.sync(guild=guild)
-            print(f"Sync {guild.name}: {len(synced)} commandes")
-        except Exception as e:
-            print(f"Erreur sync {guild.name}: {e}")
-    # Sync global aussi
-    await tree.sync()
-    print("Sync global done")
 
 
 client.run(BOT_TOKEN)
