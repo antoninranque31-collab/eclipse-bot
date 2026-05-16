@@ -4,7 +4,6 @@ from discord.ui import Modal, TextInput
 import aiohttp
 import os
 
-# Token et webhook lus depuis les variables d'environnement Railway
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 WEBHOOK_AVIS = os.environ["WEBHOOK_AVIS"]
 
@@ -17,7 +16,7 @@ tree = app_commands.CommandTree(client)
 class AvisModal(Modal, title="Laisser un avis Eclipse Official"):
     produit = TextInput(
         label="Produit achete",
-        placeholder="Ex: One Click, Unlock All, Astherial, Elysian",
+        placeholder="Ex: One Click, Unlock All, Elysian",
         required=True,
         max_length=50
     )
@@ -80,13 +79,22 @@ async def avis_cmd(interaction: discord.Interaction, membre: discord.Member):
             view=AvisBouton()
         )
     except discord.Forbidden:
-        await interaction.followup.send(f"Impossible d'envoyer un DM (DMs fermes).", ephemeral=True)
+        await interaction.followup.send("Impossible d'envoyer un DM (DMs fermes).", ephemeral=True)
 
 
 @client.event
 async def on_ready():
-    await tree.sync()
     print(f"Bot connecte : {client.user}")
+    # Force sync sur tous les serveurs
+    for guild in client.guilds:
+        try:
+            synced = await tree.sync(guild=guild)
+            print(f"Sync {guild.name}: {len(synced)} commandes")
+        except Exception as e:
+            print(f"Erreur sync {guild.name}: {e}")
+    # Sync global aussi
+    await tree.sync()
+    print("Sync global done")
 
 
 client.run(BOT_TOKEN)
